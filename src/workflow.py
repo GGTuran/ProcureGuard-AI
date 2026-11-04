@@ -22,8 +22,8 @@ from src.rules_engine import RulesEngine
 
 class ProcurementAuditWorkflow:
     def __init__(self,
-                pr_csv_path: str = "data/purchase_requests.csv",
-                rules_path: str = "data/company_rules.md",
+                pr_csv_path: str = "data/purchase-requests.csv",
+                rules_path: str = "data/company-rules.md",
                 ) -> None:
                 self.pr_csv_path = pr_csv_path
                 self.rules_path = rules_path
@@ -52,7 +52,7 @@ class ProcurementAuditWorkflow:
     
     # Node 1: Ingest PDF Stream
     def node_ingest_pdf(self, state: AuditState) -> Dict[str, Any]:
-        t0 = time.perd_counter()
+        t0 = time.perf_counter()
         pdf_path = state["pdf_path"]
         try:
             tokens = PDFParser.extract_tokens_from_stream(pdf_path)
@@ -176,7 +176,7 @@ class ProcurementAuditWorkflow:
         retrieved = []
 
         # Semantically retrieve matching rule for payment terms
-        if doc.payment_terms_next:
+        if doc.payment_terms_text:
             matches = self.rag_retriever.retrieve_relevant_rule(doc.payment_terms_text, top_k=1)
             if matches:
                 retrieved.extend(matches)
