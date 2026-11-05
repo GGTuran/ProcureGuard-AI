@@ -37,7 +37,7 @@ class PRItem(BaseModel):
     A single line item parsed from purchase-request.csv.
 
     Columns match the CSV header exactly; all monetary values are in the
-    document's native currency (assumed PHP unless otherwise specified).
+    document's native currency.
     """
 
     pr_number: str = Field(..., description="Purchase request identifier, e.g. 'PR-2024-001'.")

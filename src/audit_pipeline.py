@@ -10,7 +10,7 @@ from src.workflow import ProcurementAuditWorkflow
 
 
 class ProcurementAuditor:
-    """Compilance verification"""
+    """Compilance verification."""
 
     def __init__(
         self,
