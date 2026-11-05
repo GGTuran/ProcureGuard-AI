@@ -1,25 +1,11 @@
-"""
-src/rag_retriever.py
-====================
-Policy & Compliance RAG retrieval engine for ProcureGuard AI.
-
-Indexes company procurement compliance rules from markdown, performs semantic
-and keyword-driven relevance matching on supplier contract clauses or violation
-summaries, and formats grounded citations for audit reports.
-"""
-
 from __future__ import annotations
-
 import re
 from pathlib import Path
 from typing import Dict, List, Optional, Set
-
 from src.models import RAGRuleChunk
 
 
-# ---------------------------------------------------------------------------
 # Stop words and metadata dictionaries for policy grounding
-# ---------------------------------------------------------------------------
 
 _STOP_WORDS: Set[str] = {
     "is", "are", "the", "a", "an", "in", "on", "at", "for", "to", "of",

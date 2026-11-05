@@ -1,20 +1,7 @@
-"""
-src/pr_validator.py
-===================
-Purchase Request (PR) cross-validation and variance analysis engine
-for ProcureGuard AI.
-
-Validates supplier quotation documents against authorized purchase requests,
-performing price cap verification (Reject Rule 1, Needs Person Rule 1) and
-quantity discrepancy audits (Needs Person Rule 2).
-"""
-
 from __future__ import annotations
-
 import csv
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
-
 from src.models import PRItem, QuotationDocument, RuleViolation
 
 
@@ -116,9 +103,7 @@ class PRValidator:
         """
         violations: List[RuleViolation] = []
 
-        # ------------------------------------------------------------------
         # Guardrail 1: Document contains no line items
-        # ------------------------------------------------------------------
         if not doc.items:
             violations.append(
                 RuleViolation(
@@ -135,9 +120,7 @@ class PRValidator:
         item = doc.items[0]
         pr_item = self.get_pr_item(item.item_code)
 
-        # ------------------------------------------------------------------
-        # Guardrail 2: Unrecognized or mismatched item code
-        # ------------------------------------------------------------------
+        #  Guardrail 2: Unrecognized or mismatched item code
         if not pr_item:
             violations.append(
                 RuleViolation(
@@ -153,9 +136,7 @@ class PRValidator:
             )
             return 0.0, 0.0, violations
 
-        # ------------------------------------------------------------------
-        # Price Cap Audit Rules
-        # ------------------------------------------------------------------
+        #  Price Cap Audit Rules
         quoted_price = float(item.unit_price) if item.unit_price is not None else 0.0
         max_price = float(pr_item.max_unit_price) if pr_item.max_unit_price else 1.0
 
@@ -192,9 +173,7 @@ class PRValidator:
                 )
             )
 
-        # ------------------------------------------------------------------
         # Quantity Discrepancy Audit Rules
-        # ------------------------------------------------------------------
         quoted_qty = float(item.quantity) if item.quantity is not None else 0.0
         requested_qty = float(pr_item.quantity_requested) if pr_item.quantity_requested else 1.0
 

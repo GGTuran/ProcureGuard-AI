@@ -1,24 +1,4 @@
-"""
-src/pdf_parser.py
-=================
-PDF stream tokeniser and structured document parser for ProcureGuard AI.
-
-Architecture
-------------
-PDFParser.extract_tokens_from_stream(pdf_path)
-    Low-level: decompresses the single content stream (ASCII85 + zlib) and
-    returns a cleaned list of PDF string-literal tokens.
-
-PDFParser.parse_quotation(pdf_path)
-    High-level: calls the tokeniser then runs a battery of regex/heuristic
-    passes over the joined raw text to populate a QuotationDocument.
-
-The parser is deliberately dependency-free (stdlib only) so the project
-can run without additional system libraries.
-"""
-
 from __future__ import annotations
-
 import os
 import re
 import zlib
@@ -28,10 +8,7 @@ from typing import List
 from src.models import QuotationDocument, QuotationItem
 
 
-# ---------------------------------------------------------------------------
-# Internal helpers
-# ---------------------------------------------------------------------------
-
+#  Internal helpers
 _ITEM_CODES: set[str] = set("ABCDE")
 
 # Monetary string like "5,664,000.00" or "92.00" → float
@@ -56,9 +33,7 @@ class PDFParser:
     need to instantiate the class.
     """
 
-    # ------------------------------------------------------------------
-    # 1. Low-level stream decompression
-    # ------------------------------------------------------------------
+    # Low-level stream decompression
 
     @classmethod
     def _ascii85_decode(cls, data: bytes) -> bytes:
@@ -221,9 +196,7 @@ class PDFParser:
 
         return tokens
 
-    # ------------------------------------------------------------------
-    # 2. Document Header & Identification Parsing
-    # ------------------------------------------------------------------
+    # Document Header & Identification Parsing
 
     @classmethod
     def _parse_header(
@@ -248,29 +221,29 @@ class PDFParser:
             "has_tin_or_bin": False,
         }
 
-        # --- Supplier name: first substantial token before 'QUOTATION' -------
+        #  Supplier name: first substantial token before 'QUOTATION' 
         for i, tok in enumerate(tokens):
             if tok.upper() == "QUOTATION":
                 if i > 0:
                     result["supplier_name"] = tokens[i - 1]
                 break
 
-        # --- Quotation number ------------------------------------------------
+        # Quotation number
         m = re.search(r"QT-\d{4}-\d+", full_text)
         if m:
             result["quotation_no"] = m.group(0)
 
-        # --- Date (ISO-8601) --------------------------------------------------
+        # Date (ISO-8601)
         m = re.search(r"\d{4}-\d{2}-\d{2}", full_text)
         if m:
             result["date"] = m.group(0)
 
-        # --- Reference PR -----------------------------------------------------
+        # Reference PR 
         m = re.search(r"PR-\d{4}-\d+", full_text)
         if m:
             result["reference_pr"] = m.group(0)
 
-        # --- Tax IDs ----------------------------------------------------------
+        # Tax IDs 
         # TIN and BIN often appear in a single token, e.g.
         # "Supplier TIN: 101458013391 BIN: 000170141-0101"
         tin_m = re.search(r"TIN:\s*(\d+)", full_text, re.IGNORECASE)
@@ -285,9 +258,7 @@ class PDFParser:
 
         return result
 
-    # ------------------------------------------------------------------
-    # 3. Line Items & Financial Matrix Extraction
-    # ------------------------------------------------------------------
+    #  Line Items & Financial Matrix Extraction
 
     @classmethod
     def _parse_items_and_financials(
@@ -344,7 +315,7 @@ class PDFParser:
         while i < n:
             tok = tokens[i].strip()
 
-            # --- Summary rows ------------------------------------------------
+            #  Summary rows 
             tl = tok.lower()
 
             if tl == "subtotal":
@@ -369,7 +340,7 @@ class PDFParser:
                 i += 2
                 continue
 
-            # --- Line item detection ----------------------------------------
+            #Line item detection
             # Item code is a single uppercase letter A–E
             if tok in _ITEM_CODES:
                 # Expect: description (i+1), qty (i+2), unit (i+3),
@@ -399,10 +370,7 @@ class PDFParser:
 
         return result
 
-    # ------------------------------------------------------------------
-    # 4. Contractual Clauses & Guardrail Extraction
-    # ------------------------------------------------------------------
-
+    # Contractual Clauses & Guardrail Extraction
     @classmethod
     def _parse_payment_clause(cls, full_text: str) -> dict:
         """
@@ -626,9 +594,7 @@ class PDFParser:
 
         return result
 
-    # ------------------------------------------------------------------
-    # 5. Public Interface
-    # ------------------------------------------------------------------
+    #  Public Interface
 
     @classmethod
     def parse_quotation(cls, pdf_path: str) -> QuotationDocument:
@@ -662,7 +628,7 @@ class PDFParser:
         # Preserve the full raw text as a single string for downstream RAG
         raw_text: str = "\n".join(tokens)
 
-        # --- Section parsers -------------------------------------------------
+        #  Section parsers 
         header = cls._parse_header(tokens, raw_text)
         financials = cls._parse_items_and_financials(tokens)
         payment = cls._parse_payment_clause(raw_text)
@@ -670,7 +636,7 @@ class PDFParser:
         penalty = cls._parse_penalty_clause(raw_text)
         validity = cls._parse_validity_clause(raw_text)
 
-        # --- Assemble QuotationDocument --------------------------------------
+        # Assemble QuotationDocument 
         return QuotationDocument(
             # Provenance
             source_file=os.path.basename(pdf_path),

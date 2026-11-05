@@ -1,21 +1,5 @@
-"""
-src/math_verifier.py
-====================
-Deterministic mathematical integrity verification engine for ProcureGuard AI.
-
-Performs strict arithmetic audits on supplier quotation documents to catch
-calculation discrepancies, rounding inconsistencies, subtotal errors,
-missing or non-compliant VAT structures, and grand total mismatches.
-
-Conforms to:
-- Company Rule (Needs Person 6): "The numbers do not add up (for example line total or subtotal is wrong)."
-- Company Rule (Needs Person 5): "VAT is not shown separately at 15%."
-"""
-
 from __future__ import annotations
-
 from typing import List, Optional
-
 from src.models import MathCheckResult, QuotationDocument
 
 
@@ -55,9 +39,7 @@ class MathVerifier:
         total_correct: bool = True
         is_mathematically_sound: bool = True
 
-        # ------------------------------------------------------------------
         # Guard: Empty or Missing Line Items
-        # ------------------------------------------------------------------
         if not doc.items:
             details.append("Line-item audit failed: No line items found in quotation document.")
             stated_tot = round(doc.total or 0.0, 2)
@@ -77,9 +59,7 @@ class MathVerifier:
                 details=details,
             )
 
-        # ------------------------------------------------------------------
-        # 1. Line-Level Arithmetic Audit
-        # ------------------------------------------------------------------
+        #  Line-Level Arithmetic Audit
         calculated_line_total: float = 0.0
         stated_line_total: float = 0.0
 
@@ -115,9 +95,7 @@ class MathVerifier:
         stated_line_total = round(stated_line_total, 2)
         line_total_difference = round(abs(calculated_line_total - stated_line_total), 2)
 
-        # ------------------------------------------------------------------
-        # 2. Subtotal Audit
-        # ------------------------------------------------------------------
+        # Subtotal Audit
         doc_subtotal = float(doc.subtotal) if doc.subtotal is not None else 0.0
 
         if doc_subtotal > 0:
@@ -146,9 +124,7 @@ class MathVerifier:
                 is_mathematically_sound = False
                 details.append("Subtotal audit failed: Subtotal is missing or zero.")
 
-        # ------------------------------------------------------------------
-        # 3. VAT Structure Audit (Needs Person Rule 5)
-        # ------------------------------------------------------------------
+        # VAT Structure Audit (Needs Person Rule 5)
         base_for_vat = doc_subtotal if doc_subtotal > 0 else calculated_line_total
         calc_vat = round(base_for_vat * 0.15, 2) if not doc.is_vat_inclusive else 0.0
         doc_vat_amt = float(doc.vat_amount) if doc.vat_amount is not None else 0.0
@@ -187,9 +163,7 @@ class MathVerifier:
                 "nor declared inclusive."
             )
 
-        # ------------------------------------------------------------------
-        # 4. Grand Total Audit
-        # ------------------------------------------------------------------
+        # Grand Total Audit
         if not doc.is_vat_inclusive and doc_vat_amt > 0:
             calc_total = round(doc_subtotal + doc_vat_amt, 2)
         else:

@@ -1,10 +1,3 @@
-"""
-src/models.py
-=============
-Pydantic domain models, Guardrail schemas, and LangGraph state contracts
-for the ProcureGuard AI procurement compliance auditing pipeline.
-"""
-
 from __future__ import annotations
 
 from enum import Enum
@@ -14,11 +7,7 @@ from pydantic import BaseModel, Field
 from typing_extensions import TypedDict
 
 
-# ---------------------------------------------------------------------------
-# 1. Enums & Core Verdicts
-# ---------------------------------------------------------------------------
-
-
+# Enums & Core Verdicts
 class Verdict(str, Enum):
     """Final audit verdict emitted by the rules engine."""
 
@@ -27,11 +16,7 @@ class Verdict(str, Enum):
     NEEDS_REVIEW = "Needs a person to check"
 
 
-# ---------------------------------------------------------------------------
-# 2. Domain Data Contracts
-# ---------------------------------------------------------------------------
-
-
+#  Domain Data Contracts
 class PRItem(BaseModel):
     """
     A single line item parsed from purchase-request.csv.
@@ -69,17 +54,17 @@ class QuotationDocument(BaseModel):
     rules engine can distinguish 'not found' from 'explicitly zero'.
     """
 
-    # ── Provenance ──────────────────────────────────────────────────────────
+    # Provenance
     source_file: str = Field(..., description="Filename or path of the originating PDF.")
     supplier_name: str = Field(default="", description="Supplier / vendor name as printed on the document.")
     quotation_no: str = Field(default="", description="Quotation or reference number.")
     date: str = Field(default="", description="Document date as a string (ISO-8601 preferred).")
     reference_pr: str = Field(default="", description="Purchase-request number this quote responds to.")
 
-    # ── Line Items ───────────────────────────────────────────────────────────
+    # Line Items 
     items: List[QuotationItem] = Field(default_factory=list, description="Ordered list of quoted line items.")
 
-    # ── Financials ───────────────────────────────────────────────────────────
+    # Financials 
     subtotal: float = Field(default=0.0, description="Pre-tax subtotal as stated in the document.")
     vat_percent: float = Field(default=0.0, description="VAT rate as a percentage (e.g. 12.0 for 12 %).")
     vat_amount: float = Field(default=0.0, description="VAT amount as stated in the document.")
@@ -89,7 +74,7 @@ class QuotationDocument(BaseModel):
         description="True when the quoted prices already include VAT.",
     )
 
-    # ── Tax Registration ─────────────────────────────────────────────────────
+    # Tax Registration 
     tin: str = Field(default="", description="Supplier Tax Identification Number (TIN), if present.")
     bin: str = Field(default="", description="Supplier Business Identification Number (BIN), if present.")
     has_tin_or_bin: bool = Field(
@@ -97,7 +82,7 @@ class QuotationDocument(BaseModel):
         description="True when at least one of TIN or BIN was found on the document.",
     )
 
-    # ── Payment Terms ────────────────────────────────────────────────────────
+    # Payment Terms 
     advance_percent: float = Field(
         default=0.0,
         description="Advance / down-payment percentage required before delivery.",
@@ -119,7 +104,7 @@ class QuotationDocument(BaseModel):
         description="True when the payment period could not be parsed or exceeds policy limits.",
     )
 
-    # ── Delivery & Penalties ─────────────────────────────────────────────────
+    # Delivery & Penalties 
     delivery_days: int = Field(default=0, description="Promised delivery lead-time in calendar days.")
     delivery_text: str = Field(default="", description="Raw delivery-schedule string from the document.")
     has_late_penalty_clause: bool = Field(
@@ -135,25 +120,21 @@ class QuotationDocument(BaseModel):
         description="Raw late-penalty clause text as extracted from the document.",
     )
 
-    # ── Validity ─────────────────────────────────────────────────────────────
+    # Validity 
     validity_days: int = Field(
         default=0,
         description="Number of calendar days for which the quotation price is valid.",
     )
     validity_text: str = Field(default="", description="Raw validity-period string from the document.")
 
-    # ── Full Text Payload ────────────────────────────────────────────────────
+    # Full Text Payload 
     raw_text: str = Field(
         default="",
         description="Complete raw text extracted from the PDF for audit-trail and RAG purposes.",
     )
 
 
-# ---------------------------------------------------------------------------
-# 3. Validation & Guardrail Schemas
-# ---------------------------------------------------------------------------
-
-
+#  Validation & Guardrail Schemas
 class RuleViolation(BaseModel):
     """
     A single policy violation identified by the rules engine.
@@ -190,7 +171,7 @@ class MathCheckResult(BaseModel):
         description="True only when every sub-check (line totals, subtotal, VAT, total) passes.",
     )
 
-    # ── Per-check pass/fail flags ─────────────────────────────────────────────
+    # Per-check pass/fail flags 
     line_total_correct: bool = Field(
         ...,
         description="True when every line's stated amount equals quantity × unit_price (within tolerance).",
@@ -208,7 +189,7 @@ class MathCheckResult(BaseModel):
         description="True when the stated grand total equals subtotal + vat_amount (within tolerance).",
     )
 
-    # ── Computed vs stated deltas ────────────────────────────────────────────
+    # Computed vs stated deltas 
     calculated_line_total: float = Field(
         ...,
         description="Sum of (quantity × unit_price) recomputed across all line items.",
@@ -228,18 +209,14 @@ class MathCheckResult(BaseModel):
     calculated_total: float = Field(..., description="Grand total recomputed as subtotal + calculated_vat.")
     stated_total: float = Field(..., description="Grand total as stated in the document.")
 
-    # ── Narrative ────────────────────────────────────────────────────────────
+    #  Narrative
     details: List[str] = Field(
         default_factory=list,
         description="Ordered list of human-readable messages describing each check outcome.",
     )
 
 
-# ---------------------------------------------------------------------------
-# 4. RAG Schema
-# ---------------------------------------------------------------------------
-
-
+#  RAG Schema
 class RAGRuleChunk(BaseModel):
     """
     A policy rule chunk returned by the RAG retrieval engine.
@@ -264,11 +241,7 @@ class RAGRuleChunk(BaseModel):
     )
 
 
-# ---------------------------------------------------------------------------
-# 5. Final Output & HITL Schema
-# ---------------------------------------------------------------------------
-
-
+#  Final Output & HITL Schema
 class AuditResult(BaseModel):
     """
     The immutable audit record produced at the end of the LangGraph pipeline
@@ -278,12 +251,12 @@ class AuditResult(BaseModel):
     Streamlit HITL panel.
     """
 
-    # ── Identification ────────────────────────────────────────────────────────
+    # Identification 
     source_file: str = Field(..., description="Filename of the audited supplier PDF.")
     supplier_name: str = Field(..., description="Supplier name extracted from the document.")
     item_code: str = Field(..., description="PR item code this audit covers.")
 
-    # ── Verdict ──────────────────────────────────────────────────────────────
+    # Verdict 
     verdict: Verdict = Field(..., description="Final compliance verdict for this quotation.")
     primary_reason: str = Field(
         ...,
@@ -294,7 +267,7 @@ class AuditResult(BaseModel):
         description="Verbatim policy excerpt that most directly determines the verdict.",
     )
 
-    # ── Deviation Metrics ─────────────────────────────────────────────────────
+    # Deviation Metrics 
     price_deviation_percent: float = Field(
         ...,
         description=(
@@ -311,7 +284,7 @@ class AuditResult(BaseModel):
         ),
     )
 
-    # ── Sub-audit Results ─────────────────────────────────────────────────────
+    # Sub-audit Results 
     math_check: MathCheckResult = Field(
         ...,
         description="Full arithmetic verification result for this quotation.",
@@ -321,7 +294,7 @@ class AuditResult(BaseModel):
         description="All policy violations identified, ordered by severity (REJECT first).",
     )
 
-    # ── Human-in-the-Loop ─────────────────────────────────────────────────────
+    # Human-in-the-Loop
     human_action_required: Optional[str] = Field(
         default=None,
         description=(
@@ -330,7 +303,7 @@ class AuditResult(BaseModel):
         ),
     )
 
-    # ── Audit Trail ──────────────────────────────────────────────────────────
+    # Audit Trail 
     workflow_trace: List[Dict[str, Any]] = Field(
         default_factory=list,
         description=(
@@ -340,9 +313,7 @@ class AuditResult(BaseModel):
     )
 
 
-# ---------------------------------------------------------------------------
-# 6. LangGraph State Contract
-# ---------------------------------------------------------------------------
+# LangGraph State Contract
 
 
 class AuditState(TypedDict, total=False):
@@ -355,29 +326,29 @@ class AuditState(TypedDict, total=False):
     Fields are populated incrementally as the graph executes.
     """
 
-    # ── Inputs (required at invocation) ──────────────────────────────────────
+    #  Inputs (required at invocation) 
     pdf_path: str
     """Absolute or relative path to the supplier quotation PDF being audited."""
 
     pr_csv_path: str
     """Absolute or relative path to the purchase-request CSV file."""
 
-    # ── Stage 1: PDF Parsing ──────────────────────────────────────────────────
+    #  Stage 1: PDF Parsing 
     raw_tokens: List[str]
     """Stream of text tokens extracted from the PDF by the tokenizer."""
 
     doc: Optional[QuotationDocument]
     """Structured :class:`QuotationDocument` produced by the document parser."""
 
-    # ── Stage 2: Math Verification ────────────────────────────────────────────
+    #  Stage 2: Math Verification 
     math_check: Optional[MathCheckResult]
     """Result of the deterministic arithmetic validation pass."""
 
-    # ── Stage 3: RAG Retrieval ────────────────────────────────────────────────
+    # Stage 3: RAG Retrieval 
     retrieved_rules: List[RAGRuleChunk]
     """Policy rule chunks retrieved from the vector store for this document."""
 
-    # ── Stage 4: PR / Budget Validation ──────────────────────────────────────
+    # Stage 4: PR / Budget Validation 
     price_deviation_pct: float
     """Signed price deviation percentage vs PR ceiling."""
 
@@ -387,18 +358,18 @@ class AuditState(TypedDict, total=False):
     pr_violations: List[RuleViolation]
     """Violations found during PR budget-cap and quantity-variance checks."""
 
-    # ── Stage 5: Final Audit & HITL ───────────────────────────────────────────
+    # Stage 5: Final Audit & HITL
     final_audit: Optional[AuditResult]
     """Completed :class:`AuditResult` after all nodes have executed."""
 
-    # ── Cross-cutting ─────────────────────────────────────────────────────────
+    # Cross-cutting 
     workflow_trace: List[Dict[str, Any]]
     """Accumulated trace events emitted by every node in execution order."""
 
     requires_human_escalation: bool
     """Set to True by any node that determines HITL review is needed."""
 
-    # ── Error Handling ────────────────────────────────────────────────────────
+    # Error Handling 
     is_error: bool
     """True when an unrecoverable error has occurred in the pipeline."""
 

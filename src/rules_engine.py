@@ -1,21 +1,5 @@
-"""
-src/rules_engine.py
-===================
-Hierarchical compliance policy engine and citation generator for ProcureGuard AI.
-
-Implements two-tier policy auditing:
-1. Hard REJECT rules (Priority 1)
-2. NEEDS A PERSON TO CHECK rules (Priority 2)
-3. Fallback APPROVE when all checks pass.
-
-Integrates with PolicyRAGRetriever for grounded citation generation against
-company compliance rules.
-"""
-
 from __future__ import annotations
-
 from typing import List, Optional
-
 from src.models import (
     AuditResult,
     MathCheckResult,
@@ -79,9 +63,7 @@ class RulesEngine:
             else:
                 needs_person_violations.append(v)
 
-        # ------------------------------------------------------------------
-        # Step 1: Evaluate Hard REJECT Rules (Priority 1)
-        # ------------------------------------------------------------------
+        #  Evaluate Hard REJECT Rules (Priority 1)
 
         # Rule 1.2: Advance payment > 20%
         if doc.advance_percent is not None and doc.advance_percent > 20.0:
@@ -163,9 +145,7 @@ class RulesEngine:
                 )
             )
 
-        # ------------------------------------------------------------------
-        # Step 2: Evaluate NEEDS A PERSON TO CHECK Rules (Priority 2)
-        # ------------------------------------------------------------------
+        #  Evaluate NEEDS A PERSON TO CHECK Rules (Priority 2)
 
         # Rule 2.3: Payment terms unclear or outside 30 to 60 days
         if doc.is_payment_terms_unclear_or_out_of_range:
@@ -280,9 +260,7 @@ class RulesEngine:
                 )
             )
 
-        # ------------------------------------------------------------------
-        # Step 3: Synthesize Final Decision & Citation Grounding
-        # ------------------------------------------------------------------
+        #  Synthesize Final Decision & Citation Grounding
         all_violations = reject_violations + needs_person_violations
         item_code = doc.items[0].item_code if doc.items else "N/A"
 
